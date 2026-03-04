@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WBR Dashboard — Feb 23, 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #080c14; --card: #0d1220; --border: rgba(99,120,180,0.15);
+    --blue: #4d9fff; --orange: #ff9f43; --green: #00e5a0;
+    --red: #ff4560; --yellow: #ffd234; --purple: #b388ff;
+    --muted: #4a5578; --text: #c8d0e8; --bright: #eef1fb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', system-ui; font-size: 13px; }
+  
+  .header { padding: 20px 24px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { color: var(--bright); font-size: 18px; font-weight: 700; }
+  .header .date { color: var(--muted); font-size: 12px; }
+  
+  .tabs { display: flex; gap: 2px; padding: 12px 24px 0; border-bottom: 1px solid var(--border); }
+  .tab { padding: 8px 16px; border-radius: 6px 6px 0 0; cursor: pointer; color: var(--muted); font-weight: 600; font-size: 12px; transition: all 0.2s; border: 1px solid transparent; border-bottom: none; }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--card); color: var(--bright); border-color: var(--border); }
+  
+  .tab-content { display: none; padding: 24px; }
+  .tab-content.active { display: block; }
+  
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  
+  .kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; position: relative; overflow: hidden; }
+  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.red::before { background: var(--red); }
+  .kpi-card.yellow::before { background: var(--yellow); }
+  .kpi-card.blue::before { background: var(--blue); }
+  
+  .kpi-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .kpi-value { font-size: 26px; font-weight: 700; color: var(--bright); line-height: 1; }
+  .kpi-delta { margin-top: 6px; font-size: 12px; }
+  .kpi-delta.pos { color: var(--green); }
+  .kpi-delta.neg { color: var(--red); }
+  .kpi-delta.neutral { color: var(--muted); }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--bright); margin-bottom: 16px; }
+  .chart-wrap { position: relative; }
+  
+  .section-title { font-size: 14px; font-weight: 700; color: var(--bright); margin-bottom: 14px; border-left: 3px solid var(--blue); padding-left: 10px; }
+  
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { color: var(--muted); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+  td { padding: 8px 10px; border-bottom: 1px solid rgba(99,120,180,0.08); color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(99,120,180,0.04); }
+  .td-green { color: var(--green); font-weight: 600; }
+  .td-red { color: var(--red); font-weight: 600; }
+  .td-yellow { color: var(--yellow); font-weight: 600; }
+  .td-muted { color: var(--muted); }
+  .td-bright { color: var(--bright); font-weight: 600; }
+  
+  .alert-block { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+  .alert-line { padding: 5px 0; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+  .badge-green { background: rgba(0,229,160,0.15); color: var(--green); }
+  .badge-red { background: rgba(255,69,96,0.15); color: var(--red); }
+  .badge-yellow { background: rgba(255,210,52,0.15); color: var(--yellow); }
+  
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  
+  .segment-group { font-weight: 700; color: var(--blue); background: rgba(77,159,255,0.06); }
+
+  .migration-stayed { color: var(--green); }
+  .migration-flag { color: var(--yellow); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>📊 Growth WBR Dashboard</h1>
+    <div class="date">Week of Feb 23 – Mar 1, 2026 &nbsp;·&nbsp; Published Mar 4, 2026</div>
+  </div>
+  <div style="color:var(--muted);font-size:11px;">LW = Feb 23 &nbsp;·&nbsp; PW = Feb 16 &nbsp;·&nbsp; Feb MTD</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('tldr')">TL;DR</div>
+  <div class="tab" onclick="showTab('mass')">Mass/Premium</div>
+  <div class="tab" onclick="showTab('products')">Products</div>
+  <div class="tab" onclick="showTab('growth')">Growth</div>
+  <div class="tab" onclick="showTab('crm')">CRM</div>
+  <div class="tab" onclick="showTab('migration')">Migration</div>
+</div>
+
+<!-- TL;DR TAB -->
+<div id="tab-tldr" class="tab-content active">
+  <div class="grid-4">
+    <div class="kpi-card green">
+      <div class="kpi-label">Mass CVR MTD</div>
+      <div class="kpi-value">24.18%</div>
+      <div class="kpi-delta pos">+4.23 pp vs PW</div>
+      <div class="kpi-sub">Target: 24% &nbsp;·&nbsp; +0.18 pp 🟢</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Premium CVR MTD</div>
+      <div class="kpi-value">22.41%</div>
+      <div class="kpi-delta pos">+3.68 pp vs PW</div>
+      <div class="kpi-sub">Target: 22% &nbsp;·&nbsp; +0.41 pp 🟢</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">RCTV Share</div>
+      <div class="kpi-value">40.03%</div>
+      <div class="kpi-delta neg">+0.30 pp vs PW ↑</div>
+      <div class="kpi-sub">Target: ≤39% &nbsp;·&nbsp; Above target 🔴</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">One & Done Share</div>
+      <div class="kpi-value">20.70%</div>
+      <div class="kpi-delta neg">+0.08 pp vs PW</div>
+      <div class="kpi-sub">Target: ≤20.90% &nbsp;·&nbsp; On track 🟢</div>
+    </div>
+  </div>
+  
+  <div class="grid-4">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Growth Inc GMV (LW)</div>
+      <div class="kpi-value">$270K</div>
+      <div class="kpi-delta pos">vs PW: -$202K → Recovery</div>
+      <div class="kpi-sub">Feb MTD: +$523K</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">CRM Inc GMV (LW)</div>
+      <div class="kpi-value">$434K</div>
+      <div class="kpi-delta pos">11,219 inc loans</div>
+      <div class="kpi-sub">Feb MTD: +$4.78M</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Total Base (LW)</div>
+      <div class="kpi-value">2.94M</div>
+      <div class="kpi-delta neutral">+0.11% vs PW</div>
+      <div class="kpi-sub">RET 60% · RCTV 40%</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Growth CVR Spread</div>
+      <div class="kpi-value">+0.26 pp</div>
+      <div class="kpi-delta pos">Test 7.77% vs Ctrl 7.51%</div>
+      <div class="kpi-sub">↑ from +0.07 pp PW</div>
+    </div>
+  </div>
+
+  <div class="alert-block">
+    <div class="section-title">Alert Summary</div>
+    <div class="alert-line"><span class="badge badge-green">🟢 HIT</span> Mass CVR MTD 24.18% — surpassed Feb target of 24%</div>
+    <div class="alert-line"><span class="badge badge-green">🟢 HIT</span> Premium CVR MTD 22.41% — surpassed Feb target of 22%</div>
+    <div class="alert-line"><span class="badge badge-red">🔴 MISS</span> RCTV Share 40.03% — above Feb target of 39%. +0.30 pp WoW deterioration.</div>
+    <div class="alert-line"><span class="badge badge-green">🟢 ON TRACK</span> One & Done Share 20.70% — below Feb target of 20.90%</div>
+    <div class="alert-line"><span class="badge badge-yellow">🟡 WATCH</span> Growth Inc GMV recovered to +$270K (LW) after -$202K dip in PW</div>
+    <div class="alert-line"><span class="badge badge-green">🟢</span> CRM Inc GMV LW +$434K &amp; Feb MTD +$4.78M — strong performance</div>
+    <div class="alert-line"><span class="badge badge-yellow">🟡 FLAG</span> Churnicorn NILB: 4.31% — exceeds 4% threshold (credit freeze signal)</div>
+    <div class="alert-line"><span class="badge badge-yellow">🟡 FLAG</span> Momentum negative Inc GMV (-$126K) — retention not lifting vs control</div>
+  </div>
+
+  <div class="grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Mass vs Premium — MTD CVR Progression (Feb 2026)</div>
+      <div class="chart-wrap"><canvas id="chart-tldr-cvrprog" height="180"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Growth Inc GMV — Weekly (Feb 2026)</div>
+      <div class="chart-wrap"><canvas id="chart-tldr-incgmv" height="180"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- MASS/PREMIUM TAB -->
+<div id="tab-mass" class="tab-content">
+  <div class="section-title">MTD CVR Tracker — February 2026</div>
+  <div class="grid-2">
+    <div class="chart-card">
+      <div class="chart-title">MTD CVR Progression by Week Cutoff</div>
+      <div class="chart-wrap"><canvas id="chart-mass-cvr" height="220"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Active Users MTD — Feb 23 (LW)</div>
+      <div class="chart-wrap"><canvas id="chart-mass-users" height="220"></canvas></div>
+    </div>
+  </div>
+  <br>
+  <table>
+    <thead><tr>
+      <th>Week Cutoff</th><th>Segment</th><th>User Base</th><th>Active Users MTD</th><th>Loans MTD</th><th>CVR MTD</th><th>Δ vs Prev Week</th><th>vs Goal</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>Feb 2</td><td>MASS</td><td class="td-muted">2,553,880</td><td>218,179</td><td>256,219</td><td>8.54%</td><td class="td-muted">—</td><td class="td-red">-15.46 pp</td></tr>
+      <tr><td>Feb 2</td><td>PREMIUM</td><td class="td-muted">545,911</td><td>44,553</td><td>53,194</td><td>8.16%</td><td class="td-muted">—</td><td class="td-red">-13.84 pp</td></tr>
+      <tr><td>Feb 9</td><td>MASS</td><td class="td-muted">2,553,880</td><td>374,123</td><td>473,566</td><td>14.65%</td><td class="td-green">+6.11 pp</td><td class="td-red">-9.35 pp</td></tr>
+      <tr><td>Feb 9</td><td>PREMIUM</td><td class="td-muted">545,911</td><td>75,845</td><td>98,514</td><td>13.89%</td><td class="td-green">+5.73 pp</td><td class="td-red">-8.11 pp</td></tr>
+      <tr><td>Feb 16</td><td>MASS</td><td class="td-muted">2,553,880</td><td>509,540</td><td>685,953</td><td>19.95%</td><td class="td-green">+5.30 pp</td><td class="td-red">-4.05 pp</td></tr>
+      <tr><td>Feb 16</td><td>PREMIUM</td><td class="td-muted">545,911</td><td>102,233</td><td>142,953</td><td>18.73%</td><td class="td-green">+4.84 pp</td><td class="td-red">-3.27 pp</td></tr>
+      <tr style="background:rgba(0,229,160,0.05)"><td><strong>Feb 23 ★ LW</strong></td><td><strong>MASS</strong></td><td class="td-muted">2,553,880</td><td><strong>617,638</strong></td><td><strong>871,640</strong></td><td class="td-green"><strong>24.18%</strong></td><td class="td-green"><strong>+4.23 pp</strong></td><td class="td-green"><strong>+0.18 pp</strong></td></tr>
+      <tr style="background:rgba(0,229,160,0.05)"><td><strong>Feb 23 ★ LW</strong></td><td><strong>PREMIUM</strong></td><td class="td-muted">545,911</td><td><strong>122,328</strong></td><td><strong>180,671</strong></td><td class="td-green"><strong>22.41%</strong></td><td class="td-green"><strong>+3.68 pp</strong></td><td class="td-green"><strong>+0.41 pp</strong></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- PRODUCTS TAB -->
+<div id="tab-products" class="tab-content">
+  <div class="section-title">WoW Summary — Feb 16 vs Feb 23, 2026</div>
+  <div class="grid-3">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Grande CVR (LW)</div>
+      <div class="kpi-value">0.26%</div>
+      <div class="kpi-delta neutral">0.00% WoW change</div>
+      <div class="kpi-sub">7,542 loans · Base 2.91M</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Intro CVR (LW)</div>
+      <div class="kpi-value">7.17%</div>
+      <div class="kpi-delta pos">+1.13% WoW</div>
+      <div class="kpi-sub">100,656 loans · Base 1.40M</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Cupo CVR (LW)</div>
+      <div class="kpi-value">7.59%</div>
+      <div class="kpi-delta pos">+0.40% WoW</div>
+      <div class="kpi-sub">114,590 loans · Base 1.51M</div>
+    </div>
+  </div>
+  
+  <div class="chart-card" style="margin-bottom:20px">
+    <div class="chart-title">CVR Trend — Intro & Cupo (Feb 9 – Feb 23)</div>
+    <div class="chart-wrap"><canvas id="chart-prod-cvr" height="180"></canvas></div>
+  </div>
+
+  <table>
+    <thead><tr><th>Metric</th><th>LW (Feb 23)</th><th>PW (Feb 16)</th><th>Δ</th></tr></thead>
+    <tbody>
+      <tr><td class="td-bright">Grande — Users</td><td>2,914,389</td><td>2,916,529</td><td class="td-muted">-0.07%</td></tr>
+      <tr><td>Grande — Loans</td><td>7,542</td><td>7,567</td><td class="td-red">-0.33%</td></tr>
+      <tr><td>Grande — CVR</td><td>0.26%</td><td>0.26%</td><td class="td-muted">flat</td></tr>
+      <tr><td>Grande — AOV</td><td>$470</td><td>$460</td><td class="td-green">+2.17%</td></tr>
+      <tr><td class="td-bright">Intro — Users</td><td>1,404,295</td><td>1,402,616</td><td class="td-green">+0.12%</td></tr>
+      <tr><td>Intro — Loans</td><td>100,656</td><td>99,401</td><td class="td-green">+1.26%</td></tr>
+      <tr><td>Intro — CVR</td><td>7.17%</td><td>7.09%</td><td class="td-green">+1.13%</td></tr>
+      <tr><td>Intro — AOV</td><td>$75</td><td>$73</td><td class="td-green">+2.74%</td></tr>
+      <tr><td class="td-bright">Cupo — Users</td><td>1,510,094</td><td>1,513,913</td><td class="td-muted">-0.25%</td></tr>
+      <tr><td>Cupo — Loans</td><td>114,590</td><td>114,402</td><td class="td-green">+0.16%</td></tr>
+      <tr><td>Cupo — CVR</td><td>7.59%</td><td>7.56%</td><td class="td-green">+0.40%</td></tr>
+      <tr><td>Cupo — AOV</td><td>$100</td><td>$98</td><td class="td-green">+2.04%</td></tr>
+    </tbody>
+  </table>
+  <br>
+  <div style="color:var(--muted);font-size:11px;padding:8px 0">⚠️ Mar 2 data is partial (2 days only) — excluded from WoW comparison. Grande CVR scale (~0.26%) is not comparable to Intro/Cupo (~7%).</div>
+</div>
+
+<!-- GROWTH TAB -->
+<div id="tab-growth" class="tab-content">
+  <div class="section-title">Lifecycle Performance — CVR Test vs Control</div>
+  <div class="chart-card" style="margin-bottom:20px">
+    <div class="chart-title">Lifecycle Performance — 9 weeks (Dec 29 – Feb 23)</div>
+    <div class="chart-wrap"><canvas id="chart-growth-lifecycle" height="180"></canvas></div>
+  </div>
+  
+  <div class="grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Inc GMV by Week — Feb 2026</div>
+      <div class="chart-wrap"><canvas id="chart-growth-incgmv" height="180"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Inc GMV by Segment — LW Feb 23</div>
+      <div class="chart-wrap"><canvas id="chart-growth-seg" height="180"></canvas></div>
+    </div>
+  </div>
+  <br>
+  
+  <div class="section-title">Incrementality by Segment — WBR Week of Feb 23</div>
+  <table>
+    <thead><tr><th>Segment</th><th>Group</th><th>Audience</th><th>CVR Test</th><th>CVR Control</th><th>Uplift</th><th>Inc GMV</th><th>AOV Test</th><th>AOV Ctrl</th></tr></thead>
+    <tbody>
+      <tr class="segment-group"><td colspan="9">RETENTION</td></tr>
+      <tr><td>First Loan</td><td class="td-muted">RET</td><td>262,904</td><td>4.57%</td><td>4.28%</td><td class="td-green">+6.79%</td><td class="td-red">-$112,165</td><td>$94.5</td><td>$110.9</td></tr>
+      <tr><td>Resurrected</td><td class="td-muted">RET</td><td>61,504</td><td>10.39%</td><td>10.43%</td><td class="td-muted">-0.33%</td><td class="td-green">+$57,623</td><td>$113.1</td><td>$103.7</td></tr>
+      <tr><td>Momentum</td><td class="td-muted">RET</td><td>709,304</td><td>7.40%</td><td>7.49%</td><td class="td-red">-1.23%</td><td class="td-red">-$126,423</td><td>$109.2</td><td>$110.3</td></tr>
+      <tr><td>Super User</td><td class="td-muted">RET</td><td>537,954</td><td>20.81%</td><td>20.76%</td><td class="td-green">+0.23%</td><td class="td-red">-$41,037</td><td>$92.1</td><td>$92.6</td></tr>
+      <tr><td>Churnicorn</td><td class="td-muted">RET</td><td>3,303</td><td>16.05%</td><td>15.35%</td><td class="td-green">+4.54%</td><td class="td-red">-$2,023</td><td>$97.4</td><td>$105.9</td></tr>
+      <tr class="segment-group"><td colspan="9">REACTIVATION</td></tr>
+      <tr><td>One & Done</td><td class="td-muted">RCTV</td><td>539,095</td><td>0.998%</td><td>0.924%</td><td class="td-green">+7.99%</td><td class="td-green">+$25,772</td><td>$162.6</td><td>$170.5</td></tr>
+      <tr><td>Low Transactor</td><td class="td-muted">RCTV</td><td>158,517</td><td>4.25%</td><td>4.02%</td><td class="td-green">+5.72%</td><td class="td-green">+$151,698</td><td>$143.8</td><td>$128.2</td></tr>
+      <tr><td>Dormant</td><td class="td-muted">RCTV</td><td>323,077</td><td>1.89%</td><td>1.58%</td><td class="td-green">+19.61%</td><td class="td-green">+$232,654</td><td>$139.2</td><td>$120.9</td></tr>
+      <tr><td>Churned</td><td class="td-muted">RCTV</td><td>3,769</td><td>5.25%</td><td>4.98%</td><td class="td-green">+5.55%</td><td class="td-green">+$2,588</td><td>$132.0</td><td>$125.5</td></tr>
+      <tr><td>Disengaged</td><td class="td-muted">RCTV</td><td>15,529</td><td>8.56%</td><td>6.47%</td><td class="td-green">+32.41%</td><td class="td-green">+$81,131</td><td>$116.9</td><td>$74.1</td></tr>
+      <tr style="background:rgba(77,159,255,0.06)"><td><strong>TOTAL</strong></td><td></td><td></td><td></td><td></td><td></td><td class="td-green"><strong>+$269,818</strong></td><td></td><td></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- CRM TAB -->
+<div id="tab-crm" class="tab-content">
+  <div class="section-title">CRM Incrementality — BAU vs CONTROL_CRM</div>
+  
+  <div class="grid-3">
+    <div class="kpi-card green">
+      <div class="kpi-label">LW Inc GMV (CRM)</div>
+      <div class="kpi-value">+$434K</div>
+      <div class="kpi-delta pos">11,219 inc loans</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Feb MTD Inc GMV</div>
+      <div class="kpi-value">+$4.78M</div>
+      <div class="kpi-delta pos">48,140 inc loans MTD</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Avg CVR Spread (LW)</div>
+      <div class="kpi-value">+0.08 pp</div>
+      <div class="kpi-delta pos">BAU 1.23% vs Ctrl 1.15%</div>
+    </div>
+  </div>
+  
+  <div class="grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Daily CVR BAU vs Control — Feb 23–Mar 1</div>
+      <div class="chart-wrap"><canvas id="chart-crm-cvr" height="200"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Daily Inc GMV — Feb 23–Mar 1</div>
+      <div class="chart-wrap"><canvas id="chart-crm-gmv" height="200"></canvas></div>
+    </div>
+  </div>
+  <br>
+  
+  <table>
+    <thead><tr><th>Date</th><th>BAU Base</th><th>CVR BAU</th><th>CVR Control</th><th>Inc Loans</th><th>Inc GMV</th><th>Inc Loans MTD</th><th>Inc GMV MTD</th></tr></thead>
+    <tbody>
+      <tr><td>Feb 23</td><td class="td-muted">2,626,678</td><td>1.1050%</td><td>1.0342%</td><td class="td-green">+1,859</td><td class="td-red">-$37,043</td><td>41,104</td><td>$4,632,478</td></tr>
+      <tr><td>Feb 24</td><td class="td-muted">2,618,928</td><td>1.0630%</td><td>1.0228%</td><td class="td-green">+1,052</td><td class="td-red">-$75,404</td><td>42,156</td><td>$4,557,074</td></tr>
+      <tr><td>Feb 25</td><td class="td-muted">2,625,477</td><td>1.1494%</td><td>1.1114%</td><td class="td-green">+1,000</td><td class="td-red">-$11,987</td><td>43,156</td><td>$4,545,087</td></tr>
+      <tr><td>Feb 26</td><td class="td-muted">2,634,657</td><td>1.1436%</td><td>1.1618%</td><td class="td-red">-480</td><td class="td-red">-$170,773</td><td>42,676</td><td>$4,374,315</td></tr>
+      <tr><td>Feb 27</td><td class="td-muted">2,636,627</td><td>1.2260%</td><td>1.1078%</td><td class="td-green">+3,118</td><td class="td-green">+$213,118</td><td>45,794</td><td>$4,587,433</td></tr>
+      <tr><td>Feb 28</td><td class="td-muted">2,648,787</td><td>1.6892%</td><td>1.6006%</td><td class="td-green">+2,346</td><td class="td-green">+$188,159</td><td>48,140</td><td>$4,775,592</td></tr>
+      <tr><td>Mar 1</td><td class="td-muted">2,657,673</td><td>1.2065%</td><td>1.1191%</td><td class="td-green">+2,324</td><td class="td-green">+$327,672</td><td class="td-muted">Mar MTD: 2,324</td><td class="td-muted">Mar MTD: $327K</td></tr>
+      <tr style="background:rgba(77,159,255,0.06)"><td><strong>Week Total</strong></td><td></td><td></td><td></td><td class="td-bright"><strong>+11,219</strong></td><td class="td-green"><strong>+$433,742</strong></td><td><strong>48,140 (Feb)</strong></td><td><strong>+$4,775,592 (Feb)</strong></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- MIGRATION TAB -->
+<div id="tab-migration" class="tab-content">
+  <div class="section-title">Segment Migration — Feb 16 → Feb 23, 2026</div>
+  
+  <div class="chart-card" style="margin-bottom:20px">
+    <div class="chart-title">Stay Rate by Segment (vs Benchmark)</div>
+    <div class="chart-wrap"><canvas id="chart-mig-stay" height="220"></canvas></div>
+  </div>
+  
+  <table>
+    <thead><tr><th>Origin</th><th>Destination</th><th>Users</th><th>Share of Origin</th><th>Flag</th></tr></thead>
+    <tbody>
+      <tr class="segment-group"><td colspan="5">Super User (base: ~602K)</td></tr>
+      <tr><td class="td-muted">Super User</td><td class="migration-stayed">Super User (stayed)</td><td>572,495</td><td class="migration-stayed">95.04%</td><td></td></tr>
+      <tr><td class="td-muted">Super User</td><td>NO LONGER IN BASE</td><td>21,207</td><td>3.52%</td><td class="td-muted">✅ &lt;4%</td></tr>
+      <tr><td class="td-muted">Super User</td><td>Momentum</td><td>4,945</td><td>0.82%</td><td></td></tr>
+      <tr><td class="td-muted">Super User</td><td>Disengaged</td><td>2,840</td><td>0.47%</td><td></td></tr>
+      <tr class="segment-group"><td colspan="5">Momentum (base: ~805K)</td></tr>
+      <tr><td class="td-muted">Momentum</td><td class="migration-stayed">Momentum (stayed)</td><td>740,164</td><td class="migration-stayed">91.86%</td><td></td></tr>
+      <tr><td class="td-muted">Momentum</td><td>NO LONGER IN BASE</td><td>31,128</td><td>3.86%</td><td class="td-muted">✅ &lt;4%</td></tr>
+      <tr><td class="td-muted">Momentum</td><td>Low Transactor</td><td>17,940</td><td>2.23%</td><td></td></tr>
+      <tr><td class="td-muted">Momentum</td><td>Super User</td><td>12,250</td><td>1.52%</td><td></td></tr>
+      <tr class="segment-group"><td colspan="5">First Loan (base: ~296K)</td></tr>
+      <tr><td class="td-muted">First Loan</td><td class="migration-stayed">First Loan (stayed)</td><td>266,898</td><td class="migration-stayed">90.05%</td><td></td></tr>
+      <tr><td class="td-muted">First Loan</td><td>NO LONGER IN BASE</td><td>9,452</td><td class="migration-flag">3.19%</td><td class="td-yellow">⚠️ Elevated</td></tr>
+      <tr><td class="td-muted">First Loan</td><td>One & Done</td><td>9,436</td><td>3.18%</td><td></td></tr>
+      <tr><td class="td-muted">First Loan</td><td>Momentum</td><td>7,689</td><td>2.59%</td><td></td></tr>
+      <tr class="segment-group"><td colspan="5">Resurrected (base: ~65K)</td></tr>
+      <tr><td class="td-muted">Resurrected</td><td class="migration-stayed">Resurrected (stayed)</td><td>48,310</td><td class="migration-stayed">73.90%</td><td class="td-muted">✅ Near bench</td></tr>
+      <tr><td class="td-muted">Resurrected</td><td>Momentum</td><td>12,582</td><td class="td-green">19.25%</td><td class="td-green">✅ Healthy outflow</td></tr>
+      <tr><td class="td-muted">Resurrected</td><td>NO LONGER IN BASE</td><td>2,560</td><td>3.92%</td><td></td></tr>
+      <tr class="segment-group"><td colspan="5">Churnicorn (base: ~3.5K)</td></tr>
+      <tr><td class="td-muted">Churnicorn</td><td class="migration-stayed">Churnicorn (stayed)</td><td>2,388</td><td class="td-red">68.15%</td><td class="td-red">🔴 Below bench (65.98%)</td></tr>
+      <tr><td class="td-muted">Churnicorn</td><td>Super User</td><td>632</td><td class="td-green">18.04%</td><td></td></tr>
+      <tr><td class="td-muted">Churnicorn</td><td>NO LONGER IN BASE</td><td>151</td><td class="migration-flag">4.31%</td><td class="td-yellow">⚠️ >4% flag</td></tr>
+      <tr class="segment-group"><td colspan="5">One & Done (base: ~606K)</td></tr>
+      <tr><td class="td-muted">One & Done</td><td class="migration-stayed">One & Done (stayed)</td><td>594,816</td><td class="migration-stayed">98.23%</td><td></td></tr>
+      <tr><td class="td-muted">One & Done</td><td>Resurrected</td><td>3,967</td><td class="td-green">0.66%</td><td></td></tr>
+      <tr class="segment-group"><td colspan="5">Dormant (base: ~363K)</td></tr>
+      <tr><td class="td-muted">Dormant</td><td class="migration-stayed">Dormant (stayed)</td><td>355,364</td><td class="migration-stayed">97.90%</td><td></td></tr>
+      <tr><td class="td-muted">Dormant</td><td>Resurrected</td><td>7,144</td><td class="td-green">1.97%</td><td></td></tr>
+      <tr class="segment-group"><td colspan="5">Churned (base: ~4K)</td></tr>
+      <tr><td class="td-muted">Churned</td><td class="migration-stayed">Churned (stayed)</td><td>3,527</td><td class="td-red">87.50%</td><td></td></tr>
+      <tr><td class="td-muted">Churned</td><td>Dormant</td><td>280</td><td class="td-green">6.95%</td><td></td></tr>
+    </tbody>
+  </table>
+  <br>
+  <div style="color:var(--muted);font-size:11px;padding:8px 0">⚠️ NO LONGER IN BASE = cupo frozen (cupo_status ≠ 'AVAILABLE'). NOT churn or account closure.</div>
+</div>
+
+<script>
+Chart.defaults.color = '#4a5578';
+Chart.defaults.font.family = "'Syne', system-ui";
+Chart.defaults.font.size = 11;
+
+const gridColor = 'rgba(99,120,180,0.08)';
+const tooltipDefaults = {
+  backgroundColor: '#111827',
+  borderColor: 'rgba(99,120,180,0.3)',
+  borderWidth: 1,
+  padding: 10,
+  titleColor: '#eef1fb',
+  bodyColor: '#c8d0e8'
+};
+
+const rendered = new Set();
+
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[onclick="showTab('${id}')"]`).classList.add('active');
+  document.getElementById(`tab-${id}`).classList.add('active');
+  
+  if (!rendered.has(id)) {
+    rendered.add(id);
+    setTimeout(() => renderCharts(id), 50);
+  }
+}
+
+function renderCharts(id) {
+  const defaults = {
+    responsive: true,
+    animation: { duration: 400 },
+    plugins: { legend: { position: 'top', labels: { padding: 14, usePointStyle: true, pointStyleWidth: 8 } }, tooltip: tooltipDefaults },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: '#4a5578' } },
+      y: { grid: { color: gridColor }, ticks: { color: '#4a5578' } }
+    }
+  };
+
+  if (id === 'tldr') {
+    new Chart(document.getElementById('chart-tldr-cvrprog'), {
+      type: 'line',
+      data: {
+        labels: ['Feb 2', 'Feb 9', 'Feb 16', 'Feb 23 (LW)'],
+        datasets: [
+          { label: 'Mass CVR MTD', data: [8.54, 14.65, 19.95, 24.18], borderColor: '#4d9fff', backgroundColor: 'rgba(77,159,255,0.1)', tension: 0.3, fill: true, pointRadius: 4 },
+          { label: 'Premium CVR MTD', data: [8.16, 13.89, 18.73, 22.41], borderColor: '#ff9f43', backgroundColor: 'rgba(255,159,67,0.1)', tension: 0.3, fill: true, pointRadius: 4 },
+          { label: 'Mass Target', data: [24, 24, 24, 24], borderColor: '#4d9fff', borderDash: [5,5], pointRadius: 0 },
+          { label: 'Premium Target', data: [22, 22, 22, 22], borderColor: '#ff9f43', borderDash: [5,5], pointRadius: 0 }
+        ]
+      },
+      options: { ...defaults, plugins: { ...defaults.plugins, legend: { position: 'bottom', labels: { padding: 10, usePointStyle: true } } } }
+    });
+
+    new Chart(document.getElementById('chart-tldr-incgmv'), {
+      type: 'bar',
+      data: {
+        labels: ['Feb 2', 'Feb 9', 'Feb 16', 'Feb 23 (LW)'],
+        datasets: [{
+          label: 'Inc GMV Growth (USD)',
+          data: [367028, 88407, -202018, 269818],
+          backgroundColor: [ctx => ctx.parsed.y >= 0 ? 'rgba(0,229,160,0.7)' : 'rgba(255,69,96,0.7)'],
+          borderRadius: 4
+        }]
+      },
+      options: { ...defaults }
+    });
+  }
+
+  if (id === 'mass') {
+    new Chart(document.getElementById('chart-mass-cvr'), {
+      type: 'line',
+      data: {
+        labels: ['Feb 2', 'Feb 9', 'Feb 16', 'Feb 23'],
+        datasets: [
+          { label: 'Mass CVR MTD', data: [8.54, 14.65, 19.95, 24.18], borderColor: '#4d9fff', tension: 0.3, pointRadius: 5, fill: false },
+          { label: 'Premium CVR MTD', data: [8.16, 13.89, 18.73, 22.41], borderColor: '#ff9f43', tension: 0.3, pointRadius: 5, fill: false },
+          { label: 'Mass Goal (24%)', data: [24,24,24,24], borderColor: '#4d9fff', borderDash:[5,5], pointRadius: 0 },
+          { label: 'Premium Goal (22%)', data: [22,22,22,22], borderColor: '#ff9f43', borderDash:[5,5], pointRadius: 0 }
+        ]
+      },
+      options: defaults
+    });
+
+    new Chart(document.getElementById('chart-mass-users'), {
+      type: 'bar',
+      data: {
+        labels: ['Mass', 'Premium'],
+        datasets: [
+          { label: 'Active Users MTD', data: [617638, 122328], backgroundColor: ['rgba(77,159,255,0.7)', 'rgba(255,159,67,0.7)'], borderRadius: 4 },
+          { label: 'User Base', data: [2553880, 545911], backgroundColor: ['rgba(77,159,255,0.15)', 'rgba(255,159,67,0.15)'], borderRadius: 4 }
+        ]
+      },
+      options: defaults
+    });
+  }
+
+  if (id === 'products') {
+    new Chart(document.getElementById('chart-prod-cvr'), {
+      type: 'line',
+      data: {
+        labels: ['Feb 9', 'Feb 16', 'Feb 23'],
+        datasets: [
+          { label: 'Intro CVR', data: [7.43, 7.09, 7.17], borderColor: '#4fc3f7', tension: 0.3, pointRadius: 5 },
+          { label: 'Cupo CVR', data: [7.82, 7.56, 7.59], borderColor: '#a78bfa', tension: 0.3, pointRadius: 5 }
+        ]
+      },
+      options: defaults
+    });
+  }
+
+  if (id === 'growth') {
+    new Chart(document.getElementById('chart-growth-lifecycle'), {
+      type: 'line',
+      data: {
+        labels: ['Dec 29','Jan 5','Jan 12','Jan 19','Jan 26','Feb 2','Feb 9','Feb 16','Feb 23'],
+        datasets: [
+          { label: 'CVR Test', data: [7.51,7.40,7.46,7.83,8.30,8.39,8.06,7.70,7.77], borderColor: '#4d9fff', tension: 0.3, pointRadius: 4, fill: false },
+          { label: 'CVR Control Growth', data: [7.40,7.04,7.11,7.81,8.06,7.92,7.75,7.63,7.51], borderColor: '#ffd234', tension: 0.3, pointRadius: 4, fill: false }
+        ]
+      },
+      options: defaults
+    });
+
+    new Chart(document.getElementById('chart-growth-incgmv'), {
+      type: 'bar',
+      data: {
+        labels: ['Feb 2', 'Feb 9', 'Feb 16', 'Feb 23'],
+        datasets: [{
+          label: 'Inc GMV vs Growth',
+          data: [367028, 88407, -202018, 269818],
+          backgroundColor: [
+            'rgba(0,229,160,0.7)', 'rgba(0,229,160,0.7)', 'rgba(255,69,96,0.7)', 'rgba(0,229,160,0.7)'
+          ],
+          borderRadius: 4
+        }]
+      },
+      options: defaults
+    });
+
+    const segData = [
+      { seg: 'Dormant', val: 232654 },
+      { seg: 'Low Transactor', val: 151698 },
+      { seg: 'Disengaged', val: 81131 },
+      { seg: 'Resurrected', val: 57623 },
+      { seg: 'One & Done', val: 25772 },
+      { seg: 'Churned', val: 2588 },
+      { seg: 'Super User', val: -41037 },
+      { seg: 'Churnicorn', val: -2023 },
+      { seg: 'Momentum', val: -126423 },
+      { seg: 'First Loan', val: -112165 }
+    ].sort((a,b) => b.val - a.val);
+
+    new Chart(document.getElementById('chart-growth-seg'), {
+      type: 'bar',
+      data: {
+        labels: segData.map(d => d.seg),
+        datasets: [{
+          label: 'Inc GMV vs Growth',
+          data: segData.map(d => d.val),
+          backgroundColor: segData.map(d => d.val >= 0 ? 'rgba(0,229,160,0.7)' : 'rgba(255,69,96,0.7)'),
+          borderRadius: 3
+        }]
+      },
+      options: { ...defaults, indexAxis: 'y' }
+    });
+  }
+
+  if (id === 'crm') {
+    const dates = ['Feb 23','Feb 24','Feb 25','Feb 26','Feb 27','Feb 28','Mar 1'];
+    new Chart(document.getElementById('chart-crm-cvr'), {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          { label: 'CVR BAU', data: [1.1050,1.0630,1.1494,1.1436,1.2260,1.6892,1.2065], borderColor: '#4d9fff', tension: 0.3, pointRadius: 4 },
+          { label: 'CVR Control', data: [1.0342,1.0228,1.1114,1.1618,1.1078,1.6006,1.1191], borderColor: '#ff9f43', tension: 0.3, pointRadius: 4 }
+        ]
+      },
+      options: defaults
+    });
+
+    new Chart(document.getElementById('chart-crm-gmv'), {
+      type: 'bar',
+      data: {
+        labels: dates,
+        datasets: [{
+          label: 'Daily Inc GMV',
+          data: [-37043,-75404,-11987,-170773,213118,188159,327672],
+          backgroundColor: [-37043,-75404,-11987,-170773,213118,188159,327672].map(v => v>=0?'rgba(0,229,160,0.7)':'rgba(255,69,96,0.7)'),
+          borderRadius: 4
+        }]
+      },
+      options: defaults
+    });
+  }
+
+  if (id === 'migration') {
+    const segments = ['Super User','Momentum','Resurrected','First Loan','Low Transactor','Disengaged','Churnicorn','One & Done','Dormant','Churned'];
+    const stayRates = [95.04, 91.86, 73.90, 90.05, 89.11, 82.69, 68.15, 98.23, 97.90, 87.50];
+    const benchmarks = [95.56, 92.75, 74.84, 90.71, 89.52, 82.75, 65.98, 98.26, 98.01, 87.48];
+
+    new Chart(document.getElementById('chart-mig-stay'), {
+      type: 'bar',
+      data: {
+        labels: segments,
+        datasets: [
+          {
+            label: 'Stay Rate (LW)',
+            data: stayRates,
+            backgroundColor: stayRates.map(v => v >= 92 ? 'rgba(0,229,160,0.7)' : v >= 78 ? 'rgba(255,210,52,0.7)' : 'rgba(255,69,96,0.7)'),
+            borderRadius: 4
+          },
+          {
+            label: 'Benchmark',
+            data: benchmarks,
+            type: 'line',
+            borderColor: '#b388ff',
+            borderDash: [4,4],
+            pointRadius: 3,
+            fill: false
+          }
+        ]
+      },
+      options: defaults
+    });
+  }
+}
+
+// Render default tab
+rendered.add('tldr');
+setTimeout(() => renderCharts('tldr'), 100);
+</script>
+</body>
+</html>
